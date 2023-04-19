@@ -22,11 +22,13 @@ public:
 };
 
 class Btree{
+    int min_keys;
 public:
     Node* root;
     Btree();
     void insertElement(int toInsert);
     void insertElement(int toInsert, Node* currentNode);
+    void deleteElement(int toDelete);
     bool searchElement(int toSearch);
     bool searchElement(int toSearch, Node* currentNode);
     void show();
@@ -38,16 +40,116 @@ public:
 int main()
 {
     Btree b_tree;
+    b_tree.insertElement(0);
+    b_tree.insertElement(1);
+    b_tree.insertElement(3);
     b_tree.insertElement(5);
     b_tree.insertElement(7);
-    b_tree.insertElement(8);
-    b_tree.insertElement(10);
+
+    b_tree.deleteElement(7);
+
+
     b_tree.show();
     cout << endl;
 
-    cout << b_tree.searchElement(5);
-
     return 0;
+}
+
+void Btree::deleteElement(int toDelete)
+{
+    ///PENTRU LEAF
+    ///daca nodul are min_keys atunci e nevoit sa borrow
+    ///Caz 1. Ma imprumut din stanga daca stanga are > min_keys = (ceil(order/2) - 1) (pt a imprumuta fac rotatie la dreapta => cea mai din dreapta
+    ///cheie de la cel din stanga se duce la radacina iar ala de la radacina se duce in nodul din care sterg
+    ///Caz 2. Ma imprumut de la dreapta asemanator dar cu rotatie la stanga
+    ///Caz 3. Nici st nici dr nu are mai mult de min_keys => merge nodul din care sterg cu stanga sau dreapta dar adaugam si tatal dintre cele 2 noduri
+
+    ///PENTRU NOD INTERN
+    ///nod intern: 1. Iau cel mai din dreapta din nodul din stanga, 2. Iau cel mai din stanga din nodul din dreapta.
+    ///3. Daca nici stanga nici dreapta nu au > min_keys => merge la cele doua, sterg key si pun in dreapta
+
+    ///gasesc unde se afla nodul cu toDelete(daca se afla)
+    Node* currentNode = root;
+    Node* parentNode = nullptr;
+    bool toDeleteIsKey = false;
+    while(currentNode->isLeaf == false){
+        int i = 0;
+        while(i < currentNode->n_keys && toDelete > currentNode->keys[i])
+            i++;
+        if(currentNode->keys[i] == toDelete){
+            break;
+        }
+        parentNode = currentNode;
+        currentNode = currentNode->child[i];
+    }
+    for(int i = 0; i < currentNode->n_keys; i++)
+        if(currentNode->keys[i] == toDelete)
+            toDeleteIsKey = true;
+
+    if(toDeleteIsKey == false) return;
+
+    ///in currentNode se afla cheia ce trebuie stearsa
+
+    if(currentNode->isLeaf){
+        ///procedura pentru stergere din leaf
+        if(currentNode->n_keys > min_keys){
+            ///stergere normala
+            bool deletion = false;
+            for(int i = 0; i < currentNode->n_keys - 1; i++){
+                if(currentNode->keys[i] == toDelete) deletion = true;
+                if(deletion == true)
+                    currentNode->keys[i] = currentNode->keys[i + 1];
+            }
+            currentNode->n_keys--;
+        }
+        else{
+            ///imprumut stanga => urc la tata, iar caut si tin minte stanga si dreapta
+            int i = 0;
+            while(i < parentNode->n_keys){
+                if(parentNode->child[i + 1] == currentNode)
+                    break;
+                i++;
+            }
+            ///indiferent de ce fac, scot elementul din prima
+
+            bool deletion = false;
+            for(int j = 0; j < currentNode->n_keys - 1; j++){
+                if(currentNode->keys[j] == toDelete) deletion = true;
+                if(deletion == true)
+                    currentNode->keys[j] = currentNode->keys[j + 1];
+            }
+            currentNode->n_keys--;
+
+            Node* leftSibling = parentNode->child[i];
+            Node* rightSibling = parentNode->child[i + 2];
+
+            if(leftSibling->n_keys > min_keys){
+                ///ma pot imprumuta din stanga
+                int auxKey = parentNode->keys[i + 1];
+                parentNode->keys[i + 1] = leftSibling->keys[leftSibling->n_keys - 1];
+                leftSibling->n_keys--;
+                ///cheia de la parinte o inserez in nodul din care am sters (vine in cel mai din stanga loc)
+                currentNode->n_keys++;
+                for(int j = currentNode->n_keys - 1; j >= 1; j--){
+                    currentNode->keys[j] =  currentNode->keys[j - 1];
+                    //currentNode->child[j + 1] = currentNode->child[j]; <------- MAYBE
+                return;
+                }
+            }
+            else if(rightSibling->n_keys > min_keys){
+                ///ma pot imprumuta din dreapta
+                int auxKey = parentNode->keys[i + 1];
+                parentNode->keys[i + 1] = rightSibling->keys[0];
+                rightSibling->n_keys--;
+                currentNode->n_keys++;
+                currentNode[currentNode->n_keys - 1] = auxKey;
+                return;
+            }
+        }
+    }
+    else{
+        ///procedura pentru stergere din nod intern
+    }
 }
 
 Node::Node()
@@ -100,51 +202,53 @@ void Node::traverse() const {
 
 Btree::Btree()
 {
+    min_keys = BranchingFactor - 1;
     root = nullptr;
 }
 
 void Btree::insertElement(int toInsert)
 {
+    /*
     if(root != nullptr)
     {
         cout << endl;
         cout << "Traversing: ";
         root->traverse();
         cout << endl;
-    }
+    }DEBUG */
     if(root == nullptr){
         root = new Node(toInsert);
-        cout << toInsert << ": " << "if root == nullptr\n";
+        //cout << toInsert << ": " << "if root == nullptr\n"; DEBUG
     }
     else{
-        cout << toInsert << ": " << "else\n";
+        //cout << toInsert << ": " << "else\n"; DEBUG
         Node* currentNode = root;
         Node* parentNode = nullptr;
 
         while(currentNode->isLeaf == false){
-            cout << toInsert << ": " << "While currentNode->isLeaf == false\n";
-            //parcurg nodurile pana dau de o frunza
+            //cout << toInsert << ": " << "While currentNode->isLeaf == false\n"; DEBUG
+            ///parcurg nodurile pana dau de o frunza
             parentNode = currentNode;
             parentNode->isLeaf = false; // ???????
             int i = 0;
             while(i < currentNode->n_keys && toInsert > currentNode->keys[i]){
                 i++;
-                cout << toInsert << ": " << "while(i < currentNode->n_keys && toInsert > currentNode->keys[i])\n";
+                //cout << toInsert << ": " << "while(i < currentNode->n_keys && toInsert > currentNode->keys[i])\n"; DEBUG
             }
             currentNode = currentNode->child[i];
         }
         currentNode->insertKey(toInsert);
-        //inserez, daca e full => split
+        ///inserez, daca e full => split
         while(currentNode->n_keys == 2*BranchingFactor - 1){
-            cout << toInsert << ": " << "while(currentNode->n_keys == 2*BranchingFactor - 1)\n";
+            //cout << toInsert << ": " << "while(currentNode->n_keys == 2*BranchingFactor - 1)\n"; DEBUG
             if(currentNode == root){
-                for(int i = 0; i < currentNode->n_keys; i++)
-                    cout << currentNode->keys[i] << " ";
+                //for(int i = 0; i < currentNode->n_keys; i++)
+                    //cout << currentNode->keys[i] << " "; DEBUG
 
-                cout << toInsert << ": " << "if(currentNode == root)\n";
-                //daca e radacina => fac o radacina noua
+                //cout << toInsert << ": " << "if(currentNode == root)\n"; DEBUG
+                ///daca e radacina => fac o radacina noua
                 Node* newRoot = new Node(currentNode->keys[BranchingFactor - 1]);
-                //urc elementul din mijloc
+                ///urc elementul din mijloc
                 newRoot->isLeaf = false;
                 newRoot->child[0] = currentNode;
                 Node* newNode = new Node();
@@ -164,8 +268,8 @@ void Btree::insertElement(int toInsert)
                 parentNode = nullptr;
             }
             else{
-                cout << toInsert << ": " << "else\n";
-                //split si urc mijlocul la parent
+                //cout << toInsert << ": " << "else\n"; DEBUG
+                ///split si urc mijlocul la parent
                 Node* newNode = new Node();
                 newNode->isLeaf = currentNode->isLeaf; // changed from = true;
                 newNode->n_keys = BranchingFactor - 1;
@@ -179,7 +283,7 @@ void Btree::insertElement(int toInsert)
 
                 int keyToParent = currentNode->keys[BranchingFactor - 1];
                 int i = parentNode->n_keys;
-                //de la dreapta la stanga fac loc pentru cheie in timp ce ii gasesc pozitia potrivita
+                ///de la dreapta la stanga fac loc pentru cheie in timp ce ii gasesc pozitia potrivita
                 while(i > 0 && keyToParent < parentNode->keys[i - 1]){
                         parentNode->keys[i] = parentNode->keys[i - 1];
                         parentNode->child[i + 1] = parentNode->child[i];
