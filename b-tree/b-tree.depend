@@ -1,4 +1,5 @@
 # depslib dependency file v1.0
-1681893837 source:c:\users\fabi\desktop\unibuc folder\tema2-sd\b-tree\main.cpp
+1681983554 source:c:\users\fabi\desktop\unibuc folder\tema2-sd\b-tree\main.cpp
 	<iostream>
+	<cmath>
 

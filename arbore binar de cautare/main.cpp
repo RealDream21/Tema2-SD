@@ -25,17 +25,14 @@ public:
     void showInorder();
     void showInorder(Node* curentNode);
     bool searchElement(int toSearch);
+    int cerinta4(int X);
+    int cerinta5(int X);
     void deleteElement(int toDelete);
 };
 
 int main()
 {
     BinarySearchtree tree;
-
-    tree.insertElement(120);
-    tree.insertElement(21);
-    tree.deleteElement(120);
-    tree.showInorder();
 
     int operatie, X, t;
     fin >> t;
@@ -52,10 +49,10 @@ int main()
             fout << tree.searchElement(X) << endl;
         }
         if(operatie == 4){
-
+            fout << tree.cerinta4(X) << endl;
         }
         if(operatie == 5){
-
+            fout << tree.cerinta5(X) << endl;
         }
         if(operatie == 6){
             int Y;
@@ -179,10 +176,14 @@ void BinarySearchtree::deleteElement(int toDelete)
     }
     else{
         if(curentNode->left == nullptr || curentNode->right == nullptr){
-            if(curentNode->left == nullptr)
-                curentNode = curentNode->right;
-            else if(curentNode->right == nullptr)
-                curentNode = curentNode->left;
+            if(curentNode->left == nullptr){
+                curentNode->value = curentNode->right->value;
+                curentNode->right = nullptr;
+            }
+            else if(curentNode->right == nullptr){
+                curentNode->value = curentNode->left->value;
+                curentNode->left = nullptr;
+            }
         }
         else{
             //are si copii stanga si copii dreapta => prima la dreapta si dupa numai stanga pana la leaf si pun leaf
@@ -202,6 +203,42 @@ void BinarySearchtree::deleteElement(int toDelete)
         }
     }
 }
+
+int BinarySearchtree::cerinta4(int X)
+{
+    int ans;
+    Node* currentNode = root;
+
+    while(currentNode != nullptr){
+        if(currentNode->value < X){
+            ans = currentNode->value;
+            currentNode = currentNode->right;
+        }
+        else{
+            currentNode = currentNode->left;
+        }
+    }
+    return ans;
+}
+
+int BinarySearchtree::cerinta5(int X)
+{
+    int ans;
+    Node* currentNode = root;
+
+    while(currentNode != nullptr){
+        if(currentNode->value > X){
+            ans = currentNode->value;
+            currentNode = currentNode->left;
+        }
+        else{
+            currentNode = currentNode->right;
+        }
+    }
+
+    return ans;
+}
+
 
 void BinarySearchtree::showInorder()
 {
