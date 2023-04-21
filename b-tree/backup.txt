@@ -5,7 +5,6 @@ const int BranchingFactor = 2;
 
 class Node{
 public:
-    int min_keys;
     int n_keys;
     int n_child;
     int* keys;
@@ -19,15 +18,6 @@ public:
     int keySize()const;
     void insertKey(int key);
     void traverse()const; // to be deleted after
-    void deleteLeafPos(int PosToDelete);
-    void deleteNonLeafPos(int PosToDelete);
-    void deleteElement(int toDelete);
-    int getLower(int pos);//numarul lower < keys[pos];
-    int getHigher(int pos);//numarul higher > keys[pos];
-    void mergeNode(int pos);//merge cu urmatorul nod
-    void fixChild(int pos);
-    void borrowNext(int pos);//child[i] ia de la child[i + 1] daca are destule chei
-    void borrowPrev(int pos);//child[i] ia de la child[i - 1] daca are destule chei
     friend class Btree;
 };
 
@@ -50,39 +40,135 @@ public:
 int main()
 {
     Btree b_tree;
-    //cout << b_tree.searchElement(10);
-
-    for(int i = 0; i <= 100; i++)
-        b_tree.insertElement(i);
-
-    b_tree.deleteElement(0);
-    //b_tree.deleteElement(2);
-    //b_tree.deleteElement(3);
-    //b_tree.deleteElement(4);
-    //b_tree.deleteElement(5);
-    //b_tree.deleteElement(6);
-    //b_tree.deleteElement(7);
+    b_tree.insertElement(1);
+    b_tree.insertElement(3);
+    b_tree.insertElement(5);
+    b_tree.insertElement(7);
 
 
     b_tree.show();
-    ///problema la delete => heap corruption (0xC0000374)
-    ///check sa fie bine toate functiile de delete implementate
-
-
-    //b_tree.show();
-
-
+    cout << endl;
 
     return 0;
 }
 
+void Btree::deleteElement(int toDelete)
+{
+    ///PENTRU LEAF
+    ///daca nodul are min_keys atunci e nevoit sa borrow
+    ///Caz 1. Ma imprumut din stanga daca stanga are > min_keys = (ceil(order/2) - 1) (pt a imprumuta fac rotatie la dreapta => cea mai din dreapta
+    ///cheie de la cel din stanga se duce la radacina iar ala de la radacina se duce in nodul din care sterg
+    ///Caz 2. Ma imprumut de la dreapta asemanator dar cu rotatie la stanga
+    ///Caz 3. Nici st nici dr nu are mai mult de min_keys => merge nodul din care sterg cu stanga sau dreapta dar adaugam si tatal dintre cele 2 noduri
+
+    ///PENTRU NOD INTERN
+    ///nod intern: 1. Iau cel mai din dreapta din nodul din stanga, 2. Iau cel mai din stanga din nodul din dreapta.
+    ///3. Daca nici stanga nici dreapta nu au > min_keys => merge la cele doua, sterg key si pun in dreapta
+
+    ///gasesc unde se afla nodul cu toDelete(daca se afla)
+    Node* currentNode = root;
+    Node* parentNode = nullptr;
+    bool toDeleteIsKey = false;
+    while(currentNode->isLeaf == false){
+        int i = 0;
+        while(i < currentNode->n_keys && toDelete > currentNode->keys[i])
+            i++;
+        if(currentNode->keys[i] == toDelete){
+            break;
+        }
+        parentNode = currentNode;
+        currentNode = currentNode->child[i];
+    }
+    for(int i = 0; i < currentNode->n_keys; i++)
+        if(currentNode->keys[i] == toDelete)
+            toDeleteIsKey = true;
+
+    if(toDeleteIsKey == false) return;
+
+    ///in currentNode se afla cheia ce trebuie stearsa
+
+    if(currentNode->isLeaf){
+        ///procedura pentru stergere din leaf
+        if(currentNode->n_keys > min_keys){
+            ///stergere normala
+            bool deletion = false;
+            for(int i = 0; i < currentNode->n_keys - 1; i++){
+                if(currentNode->keys[i] == toDelete) deletion = true;
+                if(deletion == true)
+                    currentNode->keys[i] = currentNode->keys[i + 1];
+            }
+            currentNode->n_keys--;
+        }
+        else{
+            ///imprumut stanga => urc la tata, iar caut si tin minte stanga si dreapta
+            int i = 0;
+            while(i < parentNode->n_keys){
+                if(parentNode->child[i] == currentNode)
+                    break;
+                i++;
+            }
+            ///indiferent de ce fac, scot elementul din prima
+
+            bool deletion = false;
+            for(int j = 0; j < currentNode->n_keys - 1; j++){
+                if(currentNode->keys[j] == toDelete) deletion = true;
+                if(deletion == true)
+                    currentNode->keys[j] = currentNode->keys[j + 1];
+            }
+            currentNode->n_keys--;
+
+            Node* leftSibling = nullptr;
+            Node* rightSibling = nullptr;
+
+            if(i - 1 >= 0) leftSibling = parentNode->child[i - 1];
+            if(i + 1 <= currentNode->n_keys) rightSibling = parentNode->child[i + 1];
+
+
+            if(leftSibling != nullptr && leftSibling->n_keys > min_keys){
+                ///ma pot imprumuta din stanga
+                /*bool deletion = false;
+                for(int j = 0; j < currentNode->n_keys; j++){
+                    if(currentNode->keys[j] == toDelete) deletion = true;
+                    if(deletion == true)
+                        currentNode->keys[j] = currentNode->keys[j + 1];
+                }*/
+                int auxKey = parentNode->keys[i];
+                currentNode->n_keys--;
+                ///mutam cheia din stanga in nodul curent
+                currentNode->keys[0] = leftSibling->keys[leftSibling->n_keys - 1];
+                leftSibling->n_keys--;
+                ///cheia de la parinte o inserez in nodul din care am sters (vine in cel mai din stanga loc)
+                currentNode->n_keys++;
+                for(int j = currentNode->n_keys - 1; j >= 1; j--){
+                    currentNode->keys[j] = currentNode->keys[j - 1];
+                //currentNode->child[j + 1] = currentNode->child[j]; <------- MAYBE
+                }
+                currentNode->keys[0] = auxKey;
+                return;
+            }
+            else if(rightSibling != nullptr && rightSibling->n_keys > min_keys){
+                for(int j = currentNode->n_keys; j > 0; j--)
+                    currentNode->keys[j] = currentNode->keys[j - 1];
+                currentNode->n_keys++;
+                currentNode->keys[0] = parentNode->keys[i];
+                parentNode->keys[i] = rightSibling->keys[0];
+                for(int j = 0; j < rightSibling->n_keys - 1; j++)
+                    rightSibling->keys[j] = rightSibling->keys[j + 1];
+                rightSibling->n_keys--;
+                return;
+            }
+            else{
+                ///merge
+            }
+        }
+    }
+    else{
+        ///procedura pentru stergere din nod intern
+    }
+}
+
 Node::Node()
 {
-    min_keys = BranchingFactor; //??????????????????
-    /*if(BranchingFactor % 2 == 0)
-        min_keys = BranchingFactor/2;
-    else
-        min_keys = (BranchingFactor + 1)/2;*/
     n_keys = 0;
     keys = new int[2*BranchingFactor - 1];
     child = new Node*[2*BranchingFactor];
@@ -92,11 +178,6 @@ Node::Node()
 
 Node::Node(int key)
 {
-    min_keys = BranchingFactor; //?????????????????
-    /*if(BranchingFactor % 2 == 0)
-        min_keys = BranchingFactor/2;
-    else
-        min_keys = (BranchingFactor + 1)/2;*/
     n_keys = 1;
     keys = new int[2*BranchingFactor - 1];
     child = new Node*[2*BranchingFactor];
@@ -134,74 +215,13 @@ void Node::traverse() const {
         child[i]->traverse();
 }
 
-void Node::deleteLeafPos(int PosToDelete)
-{
-    bool deletion = false;
-    for(int i = PosToDelete; i < n_keys - 1; i++)
-        keys[i] = keys[i + 1];
-    n_keys--;
-    return;
-}
-
-void Node::deleteNonLeafPos(int PosToDelete)
-{
-    int aux = keys[PosToDelete];
-
-    if(child[PosToDelete]->n_keys >= min_keys){
-        //pot sa ma imprumut din dreapta
-        int lower = getLower(PosToDelete);
-        keys[PosToDelete] = lower;
-        child[PosToDelete]->deleteElement(lower);
-    }
-    else if(child[PosToDelete + 1]->n_keys >= min_keys){
-        int higher = getHigher(PosToDelete);
-        keys[PosToDelete] = higher;
-        child[PosToDelete + 1]->deleteElement(higher);
-    }
-    else{
-        mergeNode(PosToDelete);
-        child[PosToDelete]->deleteElement(PosToDelete);
-    }
-    return;
-}
-
-void Node::deleteElement(int toDelete)
-{
-    int i = 0;
-    while(i < n_keys && toDelete > keys[i])
-        i++;
-
-    if(keys[i] == toDelete){
-        if(this->isLeaf)
-            this->deleteLeafPos(i);
-        else
-            this->deleteNonLeafPos(i);
-    }
-    else{
-        if(this->isLeaf)
-            return;
-        bool isFound = false;
-        if(i == n_keys) isFound = true;
-
-        if(this->child[i]->n_keys < min_keys)
-            fixChild(i);
-
-        if(isFound && i > n_keys)
-            this->child[i - 1]->deleteElement(toDelete);
-        else
-            this->child[i]->deleteElement(toDelete);
-    }
-    return;
-}
-
 Btree::Btree()
 {
-    min_keys = BranchingFactor;// ?????????????
-
-    /*if(BranchingFactor % 2 == 0)
+    //min_keys = BranchingFactor - 1;
+    if(BranchingFactor % 2 == 0)
         min_keys = BranchingFactor/2;
     else
-        min_keys = (BranchingFactor + 1)/2;*/
+        min_keys = (BranchingFactor + 1)/2;
     root = nullptr;
 }
 
@@ -228,7 +248,7 @@ void Btree::insertElement(int toInsert)
             //cout << toInsert << ": " << "While currentNode->isLeaf == false\n"; DEBUG
             ///parcurg nodurile pana dau de o frunza
             parentNode = currentNode;
-            //parentNode->isLeaf = false; // ???????
+            parentNode->isLeaf = false; // ???????
             int i = 0;
             while(i < currentNode->n_keys && toInsert > currentNode->keys[i]){
                 i++;
@@ -298,26 +318,11 @@ void Btree::insertElement(int toInsert)
     }
 }
 
-void Node::fixChild(int pos)
+
+void Node::insertKey(int toInsert)
 {
-    //ma pot imprumuta din stanga
-    if(pos != 0 && child[pos - 1]->n_keys >= min_keys)
-        borrowPrev(pos);
-    else if(pos != n_keys && child[pos + 1]->n_keys >= min_keys)
-        borrowNext(pos);
-    else{
-        if(pos != n_keys)
-            mergeNode(pos);
-        else
-            mergeNode(pos - 1);
-    }
-    return;
-}
-
-
-void Node::insertKey(int toInsert) {
     int i = n_keys - 1;
-    while (i >= 0 && keys[i] > toInsert) {
+    while(i >= 0 && keys[i] > toInsert){
         keys[i + 1] = keys[i];
         i--;
     }
@@ -325,96 +330,6 @@ void Node::insertKey(int toInsert) {
     n_keys++;
 }
 
-int Node::getLower(int pos)
-{
-    Node* curentNode = child[pos];
-    while(!curentNode->isLeaf)
-        curentNode = curentNode->child[curentNode->n_keys];
-    return curentNode->keys[n_keys - 1];
-}
-
-int Node::getHigher(int pos)
-{
-    Node* curentNode = child[pos + 1];
-    while(!curentNode->isLeaf)
-        curentNode = curentNode->child[0];
-    return curentNode->keys[0];
-}
-
-void Node::mergeNode(int pos)
-{
-    Node* mergeHere = child[pos];
-    Node* mergeFrom = child[pos + 1];
-
-    mergeHere->keys[min_keys - 1] = keys[pos];
-
-    for(int i = 0; i < mergeFrom->n_keys; i++)
-        mergeHere->keys[min_keys + i] = mergeFrom->keys[i];
-
-    if(!mergeHere->isLeaf){
-        for(int i = 0; i <= mergeFrom->n_keys; i++)
-            mergeHere->child[i + 1] = mergeFrom->child[i];
-    }
-
-    for(int i = pos; i < n_keys - 1; i++)
-        keys[i] = keys[i + 1];
-
-    for(int i = pos + 1; i < n_keys; i++)
-        child[i] = child[i + 1];
-    mergeHere->n_keys += mergeFrom->n_keys + 1;
-    n_keys--;
-    delete mergeFrom;
-    return;
-}
-
-void Node::borrowNext(int pos)
-{
-    Node *dest = child[pos];
-    Node* source = child[pos + 1];
-
-    dest->keys[dest->n_keys] = keys[pos];
-
-    if(!dest->isLeaf)
-        dest->child[dest->n_keys + 1] = source->child[0];
-
-    keys[pos] = source->keys[0];
-
-    for(int i = 0; i < source->n_keys - 1; i++)
-        source->keys[i] = source->keys[i + 1];
-
-    if(!source->isLeaf){
-        for(int i = 0; i < source->n_keys; i++)
-            source->child[i] = source->child[i + 1];
-    }
-
-    dest->n_keys++;
-    source->n_keys--;
-    return;
-}
-
-void Node::borrowPrev(int pos)
-{
-    Node* dest = child[pos];
-    Node* source = child[pos - 1];
-
-    for(int i = dest->n_keys; i>= 1; i--)
-        dest->keys[i] = dest->keys[i - 1];
-
-    if(!dest->isLeaf)
-        for(int i = dest->n_keys + 1; i >= 1; i--)
-            dest->child[i] = dest->child[i - 1];
-
-    dest->keys[0] = keys[pos - 1];
-    if(!dest->isLeaf)
-        dest->child[0] = source->child[dest->n_keys];
-
-    keys[pos - 1] = source->keys[source->n_keys - 1];
-
-    dest->n_keys++;
-    source->n_keys--;
-
-    return;
-}
 
 bool Btree::searchElement(int toSearch)
 {
@@ -424,13 +339,6 @@ bool Btree::searchElement(int toSearch)
 bool Btree::searchElement(int toSearch, Node* currentNode)
 {
     int i = 0;
-
-    if(currentNode == nullptr)
-        return false;
-
-    if(currentNode->n_keys == 0)
-        return false;
-
     while(i < currentNode->n_keys && toSearch > currentNode->keys[i])
         i++;
     if(currentNode->keys[i] == toSearch){
@@ -442,26 +350,6 @@ bool Btree::searchElement(int toSearch, Node* currentNode)
     else{
         return searchElement(toSearch, currentNode->child[i]);
     }
-}
-
-void Btree::deleteElement(int toDelete)
-{
-    if(root->isLeaf && toDelete == root->keys[0])
-        root = nullptr;
-    if(root == nullptr)
-        return;
-    root->deleteElement(toDelete);
-
-    if(root->n_keys == 0)
-    {
-        Node* aux = root;
-        if(root->isLeaf)
-            root = nullptr;
-        else
-            root = root->child[0];
-        delete aux;
-    }
-    return;
 }
 
 
