@@ -1,7 +1,7 @@
 #include <iostream>
 using namespace std;
 
-const int BranchingFactor = 2;
+const int BranchingFactor = 3;
 
 class Node{
 public:
@@ -12,7 +12,7 @@ public:
     Node** child;
     Node* parent;
     bool isLeaf;
-    //static int BranchingFactor;
+
     Node();
     Node(int key);
     Node(Node* parentNode);
@@ -27,7 +27,7 @@ public:
     void mergeNode(int pos);//merge cu urmatorul nod
     void fixChild(int pos);
     void borrowNext(int pos);//child[i] ia de la child[i + 1] daca are destule chei
-    void borrowPrev(int pos);//child[i] ia de la child[i - 1] daca are destule chei
+    void borrowPrev(int pos);
     friend class Btree;
 };
 
@@ -52,10 +52,20 @@ int main()
     Btree b_tree;
     //cout << b_tree.searchElement(10);
 
-    for(int i = 0; i <= 100; i++)
+    for(int i = 0; i <= 27; i++)
         b_tree.insertElement(i);
 
-    b_tree.deleteElement(0);
+
+    //for(int i = 0; i <= 6; i++)
+    //    b_tree.deleteElement(i);
+
+    //cout << b_tree.root->n_keys;
+
+    //for(int i = 4; i <= 7; i++)
+        //b_tree.deleteElement(i);
+
+    b_tree.show();
+
     //b_tree.deleteElement(2);
     //b_tree.deleteElement(3);
     //b_tree.deleteElement(4);
@@ -63,16 +73,12 @@ int main()
     //b_tree.deleteElement(6);
     //b_tree.deleteElement(7);
 
-
-    b_tree.show();
+    //b_tree.show();
     ///problema la delete => heap corruption (0xC0000374)
     ///check sa fie bine toate functiile de delete implementate
 
 
     //b_tree.show();
-
-
-
     return 0;
 }
 
@@ -205,98 +211,106 @@ Btree::Btree()
     root = nullptr;
 }
 
+void Node::insertKey(int toInsert)
+{
+    int i = this->n_keys - 1;
+
+    if(this->isLeaf == true)
+    {
+        while(i >= 0 && toInsert < keys[i])
+        {
+            //caut locul cheii in timp ce ii si fac loc
+            this->keys[i + 1] = keys[i];
+            i--;
+        }
+        this->keys[i + 1] = toInsert;
+        this->n_keys++;
+    }
+    else
+    {
+        while(i >= 0 && this->keys[i] > toInsert)
+            i--;
+
+        if(this->child[i + 1]->n_keys == 2*BranchingFactor - 1)
+        {
+            Node* newNode = new Node();
+            newNode->isLeaf = this->child[i + 1]->isLeaf;
+            newNode->n_keys = BranchingFactor - 1;
+
+            for(int j = 0; j < BranchingFactor - 1; j++)
+                newNode->keys[j] = this->child[i + 1]->keys[j + BranchingFactor];
+
+            if(this->child[i + 1]->isLeaf == false)
+                for(int j = 0; j < BranchingFactor; j++)
+                    newNode->child[j] = this->child[j + BranchingFactor];
+
+            this->child[i + 1]->n_keys = BranchingFactor - 1;
+
+            for(int j = this->n_keys; j>= i + 2; j--) // changed from i + 1
+                this->child[j] = this->child[j - 1];
+            this->child[i + 2] = newNode; // changed from i + 1
+
+            for(int j = this->n_keys - 1; j >= i + 1; j--) // changed from i
+                this->keys[i + 1] = this->child[i + 1]->keys[j]; // changed from keys[i]
+
+            this->keys[i + 1] = this->child[i + 1]->keys[BranchingFactor - 1]; //changed from keys[i]
+            this->n_keys++;
+
+            if(this->keys[i + 1] < toInsert)
+                i++;
+        }
+        this->child[i + 1]->insertKey(toInsert);
+    }
+}
+
 void Btree::insertElement(int toInsert)
 {
-    /*
-    if(root != nullptr)
-    {
-        cout << endl;
-        cout << "Traversing: ";
-        root->traverse();
-        cout << endl;
-    }DEBUG */
-    if(root == nullptr){
+    Node* currentNode = root;
+    if(root == nullptr)
         root = new Node(toInsert);
-        //cout << toInsert << ": " << "if root == nullptr\n"; DEBUG
-    }
     else{
-        //cout << toInsert << ": " << "else\n"; DEBUG
-        Node* currentNode = root;
-        Node* parentNode = nullptr;
+        if(root->n_keys == 2*BranchingFactor - 1)
+        {
+            Node * newRoot = new Node();
+            newRoot->isLeaf = false;
+            newRoot->child[0] = root;
 
-        while(currentNode->isLeaf == false){
-            //cout << toInsert << ": " << "While currentNode->isLeaf == false\n"; DEBUG
-            ///parcurg nodurile pana dau de o frunza
-            parentNode = currentNode;
-            //parentNode->isLeaf = false; // ???????
+            Node * newChild = new Node();
+            newChild->isLeaf = root->isLeaf;
+            newChild->n_keys = BranchingFactor - 1;
+
+            for(int j = 0; j < BranchingFactor - 1; j++)
+                newChild->keys[j] = root->keys[j + BranchingFactor];
+            //nu e root => are copii de copiat deodata cu keys
+            if(root->isLeaf == false)
+                for(int j = 0; j < BranchingFactor; j++)
+                    newChild->child[j] = root->child[j + BranchingFactor];
+
+            root->n_keys = BranchingFactor - 1;
+
+            for(int j = newRoot->n_keys + 1; j >= 2; j--)
+                newRoot->child[j] = newRoot->child[j - 1];
+            newRoot->child[1] = newChild;
+
+            for(int j = newRoot->n_keys; j >= 1; j--)
+                newRoot->keys[j] = newRoot->keys[j - 1];
+
+            newRoot->keys[0] = root->keys[BranchingFactor - 1];
+
+            newRoot->n_keys++;
+
             int i = 0;
-            while(i < currentNode->n_keys && toInsert > currentNode->keys[i]){
+            if(newRoot->keys[0] < toInsert)
                 i++;
-                //cout << toInsert << ": " << "while(i < currentNode->n_keys && toInsert > currentNode->keys[i])\n"; DEBUG
-            }
-            currentNode = currentNode->child[i];
+            newRoot->child[i]->insertKey(toInsert);
+            root = newRoot;
         }
-        currentNode->insertKey(toInsert);
-        ///inserez, daca e full => split
-        while(currentNode->n_keys == 2*BranchingFactor - 1){
-            //cout << toInsert << ": " << "while(currentNode->n_keys == 2*BranchingFactor - 1)\n"; DEBUG
-            if(currentNode == root){
-                //for(int i = 0; i < currentNode->n_keys; i++)
-                    //cout << currentNode->keys[i] << " "; DEBUG
-
-                //cout << toInsert << ": " << "if(currentNode == root)\n"; DEBUG
-                ///daca e radacina => fac o radacina noua
-                Node* newRoot = new Node(currentNode->keys[BranchingFactor - 1]);
-                ///urc elementul din mijloc
-                newRoot->isLeaf = false;
-                newRoot->child[0] = currentNode;
-                Node* newNode = new Node();
-                newNode->isLeaf = currentNode->isLeaf; // error because of this
-                newNode->n_keys = BranchingFactor - 1;
-
-                for(int i = 0; i < BranchingFactor - 1; i++)
-                    newNode->keys[i] = currentNode->keys[i + BranchingFactor];
-
-                for(int i = 0; i <= newNode->n_keys; i++)
-                    newNode->child[i] = currentNode->child[i + BranchingFactor];
-
-                currentNode->n_keys = BranchingFactor - 1;
-                newRoot->child[1] = newNode;
-                currentNode = newRoot;
-                root = newRoot;
-                parentNode = nullptr;
-            }
-            else{
-                //cout << toInsert << ": " << "else\n"; DEBUG
-                ///split si urc mijlocul la parent
-                Node* newNode = new Node();
-                newNode->isLeaf = currentNode->isLeaf; // changed from = true;
-                newNode->n_keys = BranchingFactor - 1;
-                for(int i = 0; i < BranchingFactor - 1; i++)
-                    newNode->keys[i] = currentNode->keys[i + BranchingFactor];
-
-                currentNode->n_keys = BranchingFactor - 1;
-
-                for(int i = 0; i <= newNode->n_keys; i++)
-                    newNode->child[i] = currentNode->child[i + BranchingFactor];
-
-                int keyToParent = currentNode->keys[BranchingFactor - 1];
-                int i = parentNode->n_keys;
-                ///de la dreapta la stanga fac loc pentru cheie in timp ce ii gasesc pozitia potrivita
-                while(i > 0 && keyToParent < parentNode->keys[i - 1]){
-                        parentNode->keys[i] = parentNode->keys[i - 1];
-                        parentNode->child[i + 1] = parentNode->child[i];
-                        i--;
-                }
-                parentNode->keys[i] = keyToParent;
-                parentNode->child[i + 1] = newNode;
-                parentNode->n_keys++;
-
-                currentNode = parentNode;
-            }
+        else{
+            root->insertKey(toInsert);
         }
     }
 }
+
 
 void Node::fixChild(int pos)
 {
@@ -312,17 +326,6 @@ void Node::fixChild(int pos)
             mergeNode(pos - 1);
     }
     return;
-}
-
-
-void Node::insertKey(int toInsert) {
-    int i = n_keys - 1;
-    while (i >= 0 && keys[i] > toInsert) {
-        keys[i + 1] = keys[i];
-        i--;
-    }
-    keys[i + 1] = toInsert;
-    n_keys++;
 }
 
 int Node::getLower(int pos)
