@@ -1,7 +1,7 @@
 #include <iostream>
 using namespace std;
 
-const int BranchingFactor = 3;
+const int BranchingFactor = 2;
 
 class Node{
 public:
@@ -50,20 +50,11 @@ public:
 int main()
 {
     Btree b_tree;
-    //cout << b_tree.searchElement(10);
 
-    for(int i = 0; i <= 8; i++)
+    for(int i = 0; i <= 21; i++)
         b_tree.insertElement(i);
 
-    //b_tree.deleteElement(2);
-    //cout << b_tree.root->child[0]->child[0]->keys[0];
 
-
-    ///problema la delete => heap corruption (0xC0000374)
-    ///check sa fie bine toate functiile de delete implementate
-
-
-    b_tree.show();
     return 0;
 }
 
@@ -110,7 +101,8 @@ int Node::keySize() const
     return n_keys;
 }
 
-void Node::traverse() const {
+void Node::traverse() const
+{
     int i;
     for (i = 0; i < n_keys; i++) {
         if (!isLeaf) {
@@ -436,7 +428,7 @@ bool Btree::searchElement(int toSearch, Node* currentNode)
 
 void Btree::deleteElement(int toDelete)
 {
-    if(root->isLeaf && toDelete == root->keys[0])
+    if(root->isLeaf && toDelete == root->keys[0] && root->n_keys == 1)
         root = nullptr;
     if(root == nullptr)
         return;
