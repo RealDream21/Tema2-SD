@@ -41,6 +41,8 @@ public:
     void deleteElement(int toDelete);
     bool searchElement(int toSearch);
     bool searchElement(int toSearch, Node* currentNode);
+    int cerinta4(int X);
+    int cerinta5(int X);
     void show();
 };
 
@@ -50,9 +52,13 @@ public:
 int main()
 {
     Btree b_tree;
+    b_tree.insertElement(5);
+    b_tree.insertElement(7);
+    b_tree.deleteElement(7);
+    b_tree.insertElement(8);
+    b_tree.insertElement(10);
+    cout << b_tree.cerinta5(6);
 
-    for(int i = 0; i <= 21; i++)
-        b_tree.insertElement(i);
 
 
     return 0;
@@ -176,6 +182,7 @@ void Node::deleteElement(int toDelete)
     }
     return;
 }
+
 
 Btree::Btree()
 {
@@ -451,3 +458,50 @@ void Btree::show()
 {
     root->traverse();
 }
+
+int Btree::cerinta4(int X)
+{
+    Node* currentNode = root;
+    int largest_smaller;
+
+    while (currentNode != nullptr) {
+        int i = 0;
+        while (i < currentNode->n_keys && currentNode->keys[i] < X) {
+            largest_smaller = currentNode->keys[i];
+            i++;
+        }
+        if(currentNode->keys[i] == X) return X;
+        if(currentNode->isLeaf) currentNode = nullptr;
+        else currentNode = currentNode->child[i];
+    }
+
+    return largest_smaller;
+}
+
+int Btree::cerinta5(int X)
+{
+    Node* currentNode = root;
+    int smallest_larger;
+
+    while (currentNode != nullptr) {
+        int i = 0;
+        while (i < currentNode->n_keys && currentNode->keys[i] < X)
+        {
+            if(i < currentNode->n_keys - 1)
+                smallest_larger = currentNode->keys[i + 1];
+            i++;
+        }
+        if(i < currentNode->n_keys && currentNode->keys[i] == X) return X;
+        if (i < currentNode->n_keys && currentNode->keys[i] < smallest_larger)
+            smallest_larger = currentNode->keys[i];
+        if (currentNode->isLeaf)
+            currentNode = nullptr;
+        else
+            currentNode = currentNode->child[i];
+    }
+    return smallest_larger;
+}
+
+
+
+
