@@ -52,33 +52,18 @@ int main()
     Btree b_tree;
     //cout << b_tree.searchElement(10);
 
-    for(int i = 0; i <= 27; i++)
+    for(int i = 0; i <= 8; i++)
         b_tree.insertElement(i);
 
-
-    //for(int i = 0; i <= 6; i++)
-    //    b_tree.deleteElement(i);
-
-    //cout << b_tree.root->n_keys;
-
-    //for(int i = 4; i <= 7; i++)
-        //b_tree.deleteElement(i);
-
-    b_tree.show();
-
     //b_tree.deleteElement(2);
-    //b_tree.deleteElement(3);
-    //b_tree.deleteElement(4);
-    //b_tree.deleteElement(5);
-    //b_tree.deleteElement(6);
-    //b_tree.deleteElement(7);
+    //cout << b_tree.root->child[0]->child[0]->keys[0];
 
-    //b_tree.show();
+
     ///problema la delete => heap corruption (0xC0000374)
     ///check sa fie bine toate functiile de delete implementate
 
 
-    //b_tree.show();
+    b_tree.show();
     return 0;
 }
 
@@ -174,10 +159,10 @@ void Node::deleteNonLeafPos(int PosToDelete)
 void Node::deleteElement(int toDelete)
 {
     int i = 0;
-    while(i < n_keys && toDelete > keys[i])
+    while(i < this->n_keys && toDelete > this->keys[i])
         i++;
 
-    if(keys[i] == toDelete){
+    if(i < this-> n_keys && keys[i] == toDelete){
         if(this->isLeaf)
             this->deleteLeafPos(i);
         else
@@ -187,12 +172,12 @@ void Node::deleteElement(int toDelete)
         if(this->isLeaf)
             return;
         bool isFound = false;
-        if(i == n_keys) isFound = true;
+        if(i == this->n_keys) isFound = true;
 
         if(this->child[i]->n_keys < min_keys)
             fixChild(i);
 
-        if(isFound && i > n_keys)
+        if(isFound && i > this->n_keys)
             this->child[i - 1]->deleteElement(toDelete);
         else
             this->child[i]->deleteElement(toDelete);
@@ -217,6 +202,7 @@ void Node::insertKey(int toInsert)
 
     if(this->isLeaf == true)
     {
+
         while(i >= 0 && toInsert < keys[i])
         {
             //caut locul cheii in timp ce ii si fac loc
@@ -241,17 +227,18 @@ void Node::insertKey(int toInsert)
                 newNode->keys[j] = this->child[i + 1]->keys[j + BranchingFactor];
 
             if(this->child[i + 1]->isLeaf == false)
-                for(int j = 0; j < BranchingFactor; j++)
-                    newNode->child[j] = this->child[j + BranchingFactor];
+                for(int j = 0; j < BranchingFactor; j++) // changed from BranchingFactor - 1
+                    newNode->child[j] = this->child[i + 1]->child[j + BranchingFactor];
 
             this->child[i + 1]->n_keys = BranchingFactor - 1;
 
-            for(int j = this->n_keys; j>= i + 2; j--) // changed from i + 1
+            for(int j = this->n_keys; j >= i + 2; j--) // changed from i + 1
                 this->child[j] = this->child[j - 1];
             this->child[i + 2] = newNode; // changed from i + 1
 
             for(int j = this->n_keys - 1; j >= i + 1; j--) // changed from i
-                this->keys[i + 1] = this->child[i + 1]->keys[j]; // changed from keys[i]
+                this->keys[j + 1] = this->keys[j]; // changed from keys[i] and changed from keys[i + 1]
+
 
             this->keys[i + 1] = this->child[i + 1]->keys[BranchingFactor - 1]; //changed from keys[i]
             this->n_keys++;
@@ -356,7 +343,7 @@ void Node::mergeNode(int pos)
 
     if(!mergeHere->isLeaf){
         for(int i = 0; i <= mergeFrom->n_keys; i++)
-            mergeHere->child[i + 1] = mergeFrom->child[i];
+            mergeHere->child[i + min_keys] = mergeFrom->child[i];
     }
 
     for(int i = pos; i < n_keys - 1; i++)
@@ -400,7 +387,7 @@ void Node::borrowPrev(int pos)
     Node* dest = child[pos];
     Node* source = child[pos - 1];
 
-    for(int i = dest->n_keys; i>= 1; i--)
+    for(int i = dest->n_keys; i >= 1; i--)
         dest->keys[i] = dest->keys[i - 1];
 
     if(!dest->isLeaf)
