@@ -43,6 +43,8 @@ public:
     bool searchElement(int toSearch, Node* currentNode);
     int cerinta4(int X);
     int cerinta5(int X);
+    void cerinta6(int X, int Y, ostream& f);
+    void cerinta6(Node* currentNode, int X, int Y, ostream& f);
     void show();
 };
 
@@ -52,12 +54,10 @@ public:
 int main()
 {
     Btree b_tree;
-    b_tree.insertElement(5);
-    b_tree.insertElement(7);
-    b_tree.deleteElement(7);
-    b_tree.insertElement(8);
+    b_tree.insertElement(5);;
+    b_tree.insertElement(8);;
     b_tree.insertElement(10);
-    cout << b_tree.cerinta5(6);
+    b_tree.cerinta6(6, 20, cout);
 
 
 
@@ -501,6 +501,28 @@ int Btree::cerinta5(int X)
     }
     return smallest_larger;
 }
+
+void Btree::cerinta6(int X, int Y, ostream& f)
+{
+    cerinta6(root, X, Y, f);
+}
+
+void Btree::cerinta6(Node* currentNode, int X, int Y, ostream& f)
+{
+    if(currentNode == nullptr)
+        return;
+    for(int i = 0; i < currentNode->n_keys; i++){
+        if(currentNode->keys[i] >= X && currentNode->keys[i] <= Y)
+            f << currentNode->keys[i] << " ";
+        if(!currentNode->isLeaf)
+            cerinta6(currentNode->child[i], X, Y, f);
+    }
+    if(!currentNode->isLeaf)
+        cerinta6(currentNode->child[currentNode->n_keys], X, Y, f);
+    return;
+}
+
+
 
 
 
