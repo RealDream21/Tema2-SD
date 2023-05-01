@@ -2,7 +2,7 @@
 #include <fstream>
 using namespace std;
 
-const int BranchingFactor = 8061;
+const int BranchingFactor = 10001;
 
 class Node{
     int min_keys;
@@ -210,20 +210,20 @@ void Node::insertKey(int toInsert)
                 newNode->keys[j] = this->child[i + 1]->keys[j + BranchingFactor];
 
             if(this->child[i + 1]->isLeaf == false)
-                for(int j = 0; j < BranchingFactor; j++) // changed from BranchingFactor - 1
+                for(int j = 0; j < BranchingFactor; j++)
                     newNode->child[j] = this->child[i + 1]->child[j + BranchingFactor];
 
             this->child[i + 1]->n_keys = BranchingFactor - 1;
 
-            for(int j = this->n_keys; j >= i + 2; j--) // changed from i + 1
+            for(int j = this->n_keys; j >= i + 2; j--)
                 this->child[j] = this->child[j - 1];
-            this->child[i + 2] = newNode; // changed from i + 1
+            this->child[i + 2] = newNode;
 
-            for(int j = this->n_keys - 1; j >= i + 1; j--) // changed from i
-                this->keys[j + 1] = this->keys[j]; // changed from keys[i] and changed from keys[i + 1]
+            for(int j = this->n_keys - 1; j >= i + 1; j--)
+                this->keys[j + 1] = this->keys[j];
 
 
-            this->keys[i + 1] = this->child[i + 1]->keys[BranchingFactor - 1]; //changed from keys[i]
+            this->keys[i + 1] = this->child[i + 1]->keys[BranchingFactor - 1];
             this->n_keys++;
 
             if(this->keys[i + 1] < toInsert)
