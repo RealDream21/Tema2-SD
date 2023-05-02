@@ -2,7 +2,7 @@
 #include <fstream>
 using namespace std;
 
-const int BranchingFactor = 10001;
+const int BranchingFactor = 2;
 
 class Node{
     int min_keys;
@@ -50,17 +50,20 @@ int main()
     Btree b_tree;
     ifstream fin("abce.in");
     ofstream fout("abce.out");
-    int t, cerinta, X;
+    int t, cerinta, X, k = 0;
     fin >> t;
     while(t)
     {
         fin >> cerinta >> X;
+        cout << "Parsed line " << k++ << " cerinta: " << cerinta << " X: " << X << endl;
         if(cerinta == 1)
             b_tree.insertElement(X);
-        else if(cerinta == 2)
+        else if(cerinta == 2){
             b_tree.deleteElement(X);
-        else if(cerinta == 3)
+        }
+        else if(cerinta == 3){
             fout << b_tree.searchElement(X) << endl;
+        }
         else if(cerinta == 4){
             fout << b_tree.cerinta4(X) << endl;
         }
@@ -121,13 +124,16 @@ void Node::deleteLeafPos(int PosToDelete)
 
 void Node::deleteNonLeafPos(int PosToDelete)
 {
+    int aux = keys[PosToDelete];
+
     if(child[PosToDelete]->n_keys >= min_keys){
-        //pot sa ma imprumut din dreapta
+        //pot sa ma imprumut din stanga
         int lower = getLower(PosToDelete);
         keys[PosToDelete] = lower;
         child[PosToDelete]->deleteElement(lower);
     }
     else if(child[PosToDelete + 1]->n_keys >= min_keys){
+        //pot sa ma imprumut din dreapta
         int higher = getHigher(PosToDelete);
         keys[PosToDelete] = higher;
         child[PosToDelete + 1]->deleteElement(higher);
@@ -154,19 +160,20 @@ void Node::deleteElement(int toDelete)
     else{
         if(this->isLeaf)
             return;
-        bool isFound = false;
-        if(i == this->n_keys) isFound = true;
+        //bool isFound = false;
+        //if(i == this->n_keys) isFound = true;
 
         if(this->child[i]->n_keys < min_keys)
             fixChild(i);
 
-        if(isFound && i > this->n_keys)
+        if(i == n_keys && i > this->n_keys)
             this->child[i - 1]->deleteElement(toDelete);
         else
             this->child[i]->deleteElement(toDelete);
     }
     return;
 }
+
 
 Btree::Btree()
 {
@@ -210,20 +217,20 @@ void Node::insertKey(int toInsert)
                 newNode->keys[j] = this->child[i + 1]->keys[j + BranchingFactor];
 
             if(this->child[i + 1]->isLeaf == false)
-                for(int j = 0; j < BranchingFactor; j++)
+                for(int j = 0; j < BranchingFactor; j++) // changed from BranchingFactor - 1
                     newNode->child[j] = this->child[i + 1]->child[j + BranchingFactor];
 
             this->child[i + 1]->n_keys = BranchingFactor - 1;
 
-            for(int j = this->n_keys; j >= i + 2; j--)
+            for(int j = this->n_keys + 1; j >= i + 2; j--) // changed from i + 1
                 this->child[j] = this->child[j - 1];
-            this->child[i + 2] = newNode;
+            this->child[i + 2] = newNode; // changed from i + 1
 
-            for(int j = this->n_keys - 1; j >= i + 1; j--)
-                this->keys[j + 1] = this->keys[j];
+            for(int j = this->n_keys - 1; j >= i + 1; j--) // changed from i
+                this->keys[j + 1] = this->keys[j]; // changed from keys[i] and changed from keys[i + 1]
 
 
-            this->keys[i + 1] = this->child[i + 1]->keys[BranchingFactor - 1];
+            this->keys[i + 1] = this->child[i + 1]->keys[BranchingFactor - 1]; //changed from keys[i]
             this->n_keys++;
 
             if(this->keys[i + 1] < toInsert)
@@ -318,24 +325,24 @@ void Node::mergeNode(int pos)
     Node* mergeHere = child[pos];
     Node* mergeFrom = child[pos + 1];
 
-    mergeHere->keys[min_keys - 1] = keys[pos];
+    mergeHere->keys[BranchingFactor - 1] = keys[pos];
 
     for(int i = 0; i < mergeFrom->n_keys; i++)
-        mergeHere->keys[min_keys + i] = mergeFrom->keys[i];
+        mergeHere->keys[BranchingFactor + i] = mergeFrom->keys[i];
 
     if(!mergeHere->isLeaf){
         for(int i = 0; i <= mergeFrom->n_keys; i++)
-            mergeHere->child[i + min_keys] = mergeFrom->child[i];
+            mergeHere->child[i + BranchingFactor] = mergeFrom->child[i];
     }
 
     for(int i = pos; i < n_keys - 1; i++)
         keys[i] = keys[i + 1];
 
-    for(int i = pos + 1; i < n_keys; i++)
+    for(int i = pos + 1; i < n_keys - 1; i++)
         child[i] = child[i + 1];
     mergeHere->n_keys += mergeFrom->n_keys + 1;
     n_keys--;
-    delete mergeFrom;
+    delete (mergeFrom);
     return;
 }
 
@@ -418,8 +425,6 @@ bool Btree::searchElement(int toSearch, Node* currentNode)
 
 void Btree::deleteElement(int toDelete)
 {
-    if(root->isLeaf && toDelete == root->keys[0] && root->n_keys == 1)
-        root = nullptr;
     if(root == nullptr)
         return;
     root->deleteElement(toDelete);
@@ -436,7 +441,8 @@ void Btree::deleteElement(int toDelete)
     return;
 }
 
-int Btree::cerinta4(int X) {
+int Btree::cerinta4(int X)
+{
     Node* currentNode = root;
     int largest_smaller;
 
@@ -481,7 +487,6 @@ int Btree::cerinta5(int X)
 void Btree::cerinta6(int X, int Y, ofstream& f)
 {
     cerinta6(root, X, Y, f);
-    f << endl;
 }
 
 void Btree::cerinta6(Node* currentNode, int X, int Y, ofstream& f)
