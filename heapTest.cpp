@@ -7,15 +7,17 @@ using namespace std;
 
 
 class Heap{
+public:
     int dim;
     std::vector<int> v;
     void urca(int i);
-    void coboara();
-public:
+    void coboara(int i);
+
     Heap() = default;
     void pushToHeap(const int x);
     int popMax();
     void mergeHeaps(Heap * ptrOther);
+    void mergeHeaps();
 };
 
 int main()
@@ -69,9 +71,8 @@ void Heap::urca(int i)
     }
 }
 
-void Heap::coboara()
+void Heap::coboara(int i)
 {
-    int i = 0;
     while(i * 2 + 2 < v.size()){
 
         int fiu_st = i * 2 + 1;
@@ -93,13 +94,14 @@ void Heap::coboara()
 void Heap::pushToHeap(const int x){
     v.push_back(x);
     urca(v.size() - 1);
+    return;
 }
 
 int Heap::popMax()
 {
     int toReturn = v[0];
     v[0] = v[v.size() - 1];
-    coboara();
+    coboara(0);
     v.pop_back();
     return toReturn;
 }
@@ -111,3 +113,4 @@ void Heap::mergeHeaps(Heap* other)
     delete other;
     return;
 }
+
