@@ -1,31 +1,61 @@
 #include <iostream>
 #include <vector>
+#include <fstream>
 
 using namespace std;
 
 
 
 class Heap{
+public:
     int dim;
     std::vector<int> v;
     void urca(int i);
-    void coboara();
-public:
+    void coboara(int i);
+
     Heap() = default;
     void pushToHeap(const int x);
     int popMax();
     void mergeHeaps(Heap * ptrOther);
-    void show();
+    void mergeHeaps();
 };
 
 int main()
 {
     Heap * a = new Heap();
-    Heap ** multimi = new Heap*[101];
-    for(int i = 0; i <= 100; i++)
-        multimi[i] = nullptr;
+    Heap ** multimi = new Heap*[102];
+    int N, Q;
+    ifstream fin("mergeheap.in");
+    ofstream fout("mergeheap.out");
+    fin >> N >> Q;
+    for(int i = 1; i <= N; i++)
+        multimi[i] = new Heap();
 
-
+    while(Q)
+    {
+        int operatie;
+        fin >> operatie;
+        if(operatie == 1){
+            int m, X;
+            fin >> m >> X;
+            if(multimi[m] == nullptr){
+                multimi[m] = new Heap();
+            }
+            multimi[m]->pushToHeap(X);
+        }
+        else if(operatie == 2){
+            int m;
+            fin >> m;
+            fout << multimi[m]->popMax() << endl;
+        }
+        else if(operatie == 3){
+            int a, b;
+            fin >> a >> b;
+            multimi[a]->mergeHeaps(multimi[b]);
+            multimi[b] = nullptr;
+        }
+        Q--;
+    }
     return 0;
 }
 
@@ -41,9 +71,8 @@ void Heap::urca(int i)
     }
 }
 
-void Heap::coboara()
+void Heap::coboara(int i)
 {
-    int i = 0;
     while(i * 2 + 2 < v.size()){
 
         int fiu_st = i * 2 + 1;
@@ -65,13 +94,14 @@ void Heap::coboara()
 void Heap::pushToHeap(const int x){
     v.push_back(x);
     urca(v.size() - 1);
+    return;
 }
 
 int Heap::popMax()
 {
     int toReturn = v[0];
     v[0] = v[v.size() - 1];
-    coboara();
+    coboara(0);
     v.pop_back();
     return toReturn;
 }
@@ -82,11 +112,4 @@ void Heap::mergeHeaps(Heap* other)
         pushToHeap(other->v[i]);
     delete other;
     return;
-}
-
-
-void Heap::show()
-{
-    for(int i = 0; i < v.size(); i++)
-        cout << v[i] << " ";
 }
